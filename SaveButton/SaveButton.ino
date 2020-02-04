@@ -22,7 +22,7 @@ void setup() {
 }
 
 int buttonMode = 0;
-int totalModes = 2;
+int totalModes = 3;
 
 long longpressTimer = 0;
 
@@ -140,6 +140,9 @@ void updateDisplay() {
 boolean isClicking = false;
 long lastClick = 0;
 long clickInterval = 25;
+long moveCycle = 0; // %360 timer for place in movement cycle for 
+long moveRadius = 50; //Radius of the circle to use when moving the mouse during clicking
+double twoPi = 3.14159 * 2;
 
 void performMouseClickLoop() {
   if (switchButton.risingEdge()) {
@@ -169,6 +172,42 @@ void performMouseClickLoop() {
   }
 }
 
+void performMouseClickMoveLoop() {
+  if (switchButton.risingEdge()) {
+    isClicking = !isClicking;
+  }
+
+  if (isClicking) {
+    if (!lockDisplayCommands) {
+      displayCommands[0] = 255;
+      displayCommandsSet = 1;
+    }
+
+    long offset = millis() - lastClick;
+
+    Serial.println(offset);
+
+    if (offset > clickInterval) {
+      Serial.println("Clicking & moving");
+      long x = cos((moveCycle * 1.0) / twoPi) * moveRadius;
+      long y = sin((moveCycle * 1.0) / twoPi) * moveRadius;
+      moveCycle = (moveCycle + 1) % 360;
+
+      x = cos((moveCycle * 1.0) / twoPi) * moveRadius - x;
+      y = sin((moveCycle * 1.0) / twoPi) * moveRadius - y;
+            
+      Mouse.move(x, y);
+      Mouse.click();
+      lastClick = millis();
+    }
+  } else {
+    if (!lockDisplayCommands) {
+      displayCommands[0] = 0;
+      displayCommandsSet = 1;
+    }
+  }
+}
+
 void loop() {
   bool runLoop = true;
   if (switchButton.update()) {
@@ -184,6 +223,9 @@ void loop() {
         break;
       case 1:
         performMouseClickLoop();
+        break;
+      case 2:
+        performMouseClickMoveLoop();
         break;
     }
   }
